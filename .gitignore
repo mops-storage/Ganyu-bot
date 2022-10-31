@@ -1,4 +1,6 @@
-.config.py
-.card.png
-.discord.log
-.data.sqlite
+config.py
+card.png
+discord.log
+data.sqlite
+__pycache__/
+cogs/__pycache__/
