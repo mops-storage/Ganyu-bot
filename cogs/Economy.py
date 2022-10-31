@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from email import message
 from discord.ext import commands
 import discord
 from config import settings
@@ -288,7 +287,7 @@ class Economy(commands.Cog, name='Економічні команди'):
                 background.save("card.png")
                 await ctx.send(file = discord.File(fp = "card.png"))
         
-    @commands.command(name='set_xp')
+    @commands.command(name='set_exp')
     async def set_xp(self, ctx, count:int, user: discord.Member = None):
         """Встановлює досвід користувачу
 
@@ -296,9 +295,9 @@ class Economy(commands.Cog, name='Економічні команди'):
             `count` (int): Кількість досвіду
             `user` (discord.Member, optional): Користувач, якому змінюється досвід. Якщщо це параметр пустий(`None`), тоді досвід присвоюється автору. 
         Example:
-        >> .set_xp `<count>` `<user:optional>`\n
-        >> .set_xp `40`\n
-        >> .set_xp `40` `@Indi Mops`
+        >> .set_exp `<count>` `<user:optional>`\n
+        >> .set_exp `40`\n
+        >> .set_exp `40` `@Indi Mops`
         """
         await ctx.channel.purge(limit=1)
         if user is None:
@@ -313,8 +312,34 @@ class Economy(commands.Cog, name='Економічні команди'):
             await ctx.send(embed = emb)
             data.commit()
     
-    @commands.command()
-    async def ld(self, ctx):
+    @commands.command(name='set_lvl')
+    async def set_xp(self, ctx, count:int, user: discord.Member = None):
+        """Встановлює рівень користувачу
+
+        Args:
+            `count` (int): Кількість досвіду
+            `user` (discord.Member, optional): Користувач, якому змінюється досвід. Якщщо це параметр пустий(`None`), тоді досвід присвоюється автору. 
+        Example:
+        >> .set_lvl `<count>` `<user:optional>`\n
+        >> .set_lvl `40`\n
+        >> .set_lvl `40` `@Indi Mops`
+        """
+        await ctx.channel.purge(limit=1)
+        if user is None:
+            user=ctx.author
+            cur.execute(f'UPDATE users SET lvl = {count} WHERE id = {user.id}')
+            emb = discord.Embed(title = 'Рівень успішно змінено', description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
+            await ctx.send(embed = emb)
+            data.commit()
+        else:
+            cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
+            emb = discord.Embed(title = 'Рівень успішно змінено', description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
+            await ctx.send(embed = emb)
+            data.commit()
+    
+    
+    @commands.command(alias='ld')
+    async def leaderboard(self, ctx):
         count = 0
         count_member = 0
         for i in cur.execute(f'SELECT id FROM users WHERE server_id = {ctx.author.guild.id}'):
@@ -329,5 +354,6 @@ class Economy(commands.Cog, name='Економічні команди'):
             )
             embed.set_thumbnail(url=ctx.author.guild.icon)
         await ctx.send(embed=embed)
+
 async def setup(bot):
     await bot.add_cog(Economy(bot))
