@@ -1,4 +1,4 @@
-config.py
-card.png
-discord.log
-data.sqlite
+.config.py
+.card.png
+.discord.log
+.data.sqlite
