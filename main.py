@@ -47,8 +47,17 @@ async def on_command_error(ctx, error):
             description=f'Ви ще не можете використовувати цю команду!\nСпробуйте через: **{cool}**',
             color=0xff0000
         )
-        await ctx.send(embed=embed)
-
+        await ctx.reply(embed=embed)
+    
+    if isinstance(error, commands.CommandNotFound):
+        embed = discord.Embed(
+            title='Помилка!',
+            description=f'Дану комнаду не знайдено!\nСкористайтесь: `{settings["prefix"]}help`',
+            color=0xff0000
+        )
+        
+        await ctx.reply(embed=embed)
+        
 async def load_extensions():
     """Load cogs for main file
     """
