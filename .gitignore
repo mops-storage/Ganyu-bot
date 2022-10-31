@@ -3,4 +3,4 @@ card.png
 discord.log
 data.sqlite
 __pycache__/
-cogs/__pycache__/
+*/__pycache__/
