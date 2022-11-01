@@ -1,5 +1,5 @@
 settings = {
-    'token': 'OTM4NTgwOTczMDU3MDkzNzAy.GAPtq4.__DwUDSA31V7_Syyl4cAdF0yQ75yV8EQ2ILjTk',
+    'token': 'TOKEN',
     'version': '2.0.0',
     'name': 'Ganyu',
     'prefix': '.',
