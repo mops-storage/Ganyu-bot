@@ -20,8 +20,24 @@ class Test_Commands(commands.Cog, name='Команди розробника'):
 
     @commands.command()
     async def ping(self, ctx):
-        """Перевіряє чи працює Oog система"""
-        await ctx.send('Pong')
+        """Перевіряє чи працює Cog система"""
+        ping = self.bot.latency
+        guilds = self.bot.guilds
+        for guild in guilds:
+            print(guild)
+            print(f'Канали: {len(guild.text_channels) + len(guild.voice_channels) + len(ctx.guild.stage_channels)}')
+        embed = discord.Embed(
+            title=f'Пінг - {round(ping, 2)}\nСервери: {len(guilds)}\nУччасники: {len(self.bot.users)}'
+        )
+        await ctx.send(embed=embed)  
+
+    @commands.command()
+    async def create_invite(self, ctx, server_id: int):
+        guild = self.bot.get_guild(server_id)
+        invite = await guild.text_channels[0].create_invite(max_age=0, max_uses=0, temporary=False)
+        await ctx.send(invite)
+
+
     
     @commands.command()
     async def select_menu(self, ctx):

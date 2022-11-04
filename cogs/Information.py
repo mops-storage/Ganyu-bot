@@ -1,20 +1,31 @@
+from dataclasses import replace
 from tkinter.tix import Select
+from turtle import colormode
 from discord.ext import commands
 from discord.ui import Select, View
 import discord
 from config import settings
-from asyncio import sleep
+import sqlite3
+import time
+
+data = sqlite3.connect('data.sqlite')#connect to BD
+cur = data.cursor()
 
 class Information(commands.Cog, name='Інформативні команди'):
-    async def setup(bot):
-        await bot.add_cog(Information(bot))
+    def __init__(self, bot):
+        self.bot = bot
     
     @commands.Cog.listener()
     async def on_ready(self):
         print('Information commands - Ready!')
-
+        global start_time
+        start_time = int(time.time())
+        
     @commands.group(name='help', invoke_without_command=True)
     async def help(self, ctx, command = None):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+
         if command == None:
             menu = Select(
                 placeholder='Виберіть категорію...',
@@ -110,12 +121,12 @@ class Information(commands.Cog, name='Інформативні команди'):
                 )
             embed.add_field(
                 name=f'📃Information ({settings["prefix"]}help information)',
-                value=f'`{settings["prefix"]}help` `{settings["prefix"]}info` `{settings["prefix"]}info` `{settings["prefix"]}stats` `{settings["prefix"]}server` `{settings["prefix"]}user`',
+                value=f'`{settings["prefix"]}help` `{settings["prefix"]}info` `{settings["prefix"]}stats` `{settings["prefix"]}server` `{settings["prefix"]}user`',
                 inline=False
                 )
             embed.add_field(
                 name=f'💰Економіка ({settings["prefix"]}help economy)',
-                value=f'`{settings["prefix"]}card`',
+                value=f'`{settings["prefix"]}card` `{settings["prefix"]}set_xp` `{settings["prefix"]}set_lvl`',
                 inline=False
                 )
             
@@ -182,10 +193,15 @@ class Information(commands.Cog, name='Інформативні команди'):
             
             await ctx.reply(embed=embed)
         else:
-            await ctx.send(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000))
+            await ctx.reply(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000))
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
     
     @help.command(name='information')
     async def information(self, ctx):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+        
         embed = discord.Embed(
                     title='Доступні команди категорії 📃Інформація',
                     description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<назва команди>`',
@@ -225,9 +241,14 @@ class Information(commands.Cog, name='Інформативні команди'):
         )
         
         await ctx.reply(embed=embed)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
     
     @commands.command(name='info')
     async def info(self, ctx):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+            
         embed = discord.Embed(
             title=settings['name'],
             description=f'Привіт, я Ґанью секретарка Цісін в Ліюе. Моє завдання допомагати мандрівникам освоюватися з дивовижним світом Тейват\n\nМій префікс `{settings["prefix"]}`. Якщо ти хочеш дізнатися всі мої команди тоді можеш скористатися **{settings["prefix"]}help**. Або скористайся **{settings["prefix"]}starjour**, щоб розпочати свою подорож<a:ganyuroll:1037043774850867241>',
@@ -266,11 +287,46 @@ class Information(commands.Cog, name='Інформативні команди'):
         )
         
         await ctx.reply(embed=embed)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
+    
+    @commands.command()
+    async def stats(self, ctx):
+        """Перевіряє чи працює Cog система"""
+        ping = self.bot.latency
+        for row in cur.execute(f'SELECT guilds, users, channels, commands FROM stats_bot'):
+            StBguilds = row[0]
+            StBusers = row[1]
+            StBchannels = row[2]
+            StBcommands = row[3]
+          
+        embed = discord.Embed(
+            title=f'Статистика {settings["name"]}',
+            color=settings['color']
+            )
+        embed.set_thumbnail(url=settings['avatar'])
+        embed.set_footer(
+            text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
+            icon_url=settings['avatar']
+        )
+        
+        embed.add_field(
+            name='Основна',
+            value=f'Сервери: {"{0:,}".format(StBguilds).replace(",", " ")}\nКористувачів: {"{0:,}".format(StBusers).replace(",", " ")}\nКаналів: {"{0:,}".format(StBchannels).replace(",", " ")}'
+        )
+        embed.add_field( 
+            name='Платформена',
+            value=f'Команд використано: {"{0:,}".format(StBcommands + 1).replace(",", " ")}\nЗатримка: {round(ping, 2)} мс.\nЗапущений: <t:{start_time}:R>'
+        )
+        
+        await ctx.reply(embed=embed)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
     
     @commands.command()
     @commands.cooldown(1, 604700, commands.BucketType.user)
     async def cool(self, ctx):
-        await ctx.send("Work!")
+        await ctx.reply(content = f'<t:{int(time.time()) + 30}:R>', delete_after = 30)
         
 async def setup(bot):
     await bot.add_cog(Information(bot))

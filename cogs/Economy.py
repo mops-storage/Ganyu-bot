@@ -127,6 +127,9 @@ class Economy(commands.Cog, name='Економічні команди'):
         ---\n
         >> .card `<none or user mention>`
         """
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+
         if user is None:
             user = ctx.author
             for row in cur.execute(f'SELECT name, cash, money, xp, lvl FROM users WHERE id = {user.id}'):
@@ -162,8 +165,7 @@ class Economy(commands.Cog, name='Економічні команди'):
                     color = "#faa51b"
                 elif str(user.status) == "dnd" or user.status == "do_not_disturb":
                     color = "#f04848"
-                else:
-                    await ctx.send("Status don't work")
+                    
                 background.ellipse((42, 42), width=206, height=206, outline=f"{color}", stroke_width=10)
                 background.rectangle((260, 180), width=630, height=40, fill="#484b4e", radius=20)
                 step = int((xp / int(5 * (lvl ** 2) + (50 * lvl) + 100))*100)
@@ -203,7 +205,7 @@ class Economy(commands.Cog, name='Економічні команди'):
                 ]
                 background.multicolor_text((850, 30), texts = rank_level_texts, align = "right")
                 background.save("card.png")
-                await ctx.send(file = discord.File(fp = "card.png"))
+                await ctx.reply(file = discord.File(fp = "card.png"))
         else:
             for row in cur.execute(f'SELECT name, cash, money, xp, lvl FROM users WHERE id = {user.id}'):
                 name = row[0]
@@ -245,8 +247,7 @@ class Economy(commands.Cog, name='Економічні команди'):
                     color = "#faa51b"
                 elif str(user.status) == "dnd" or user.status == "do_not_disturb":
                     color = "#f04848"
-                else:
-                    await ctx.send("Status don't work")
+
                 background.ellipse((42, 42), width=206, height=206, outline=f"{color}", stroke_width=10)
                 background.rectangle((260, 180), width=630, height=40, fill="#484b4e", radius=20)
                 step = int((xp / int(5 * (lvl ** 2) + (50 * lvl) + 100))*100)
@@ -285,9 +286,11 @@ class Economy(commands.Cog, name='Економічні команди'):
                 ]
                 background.multicolor_text((850, 30), texts = rank_level_texts, align = "right")
                 background.save("card.png")
-                await ctx.send(file = discord.File(fp = "card.png"))
+                await ctx.reply(file = discord.File(fp = "card.png"))
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
         
-    @commands.command(name='set_exp')
+    @commands.command(name='set_xp')
     async def set_xp(self, ctx, count:int, user: discord.Member = None):
         """Встановлює досвід користувачу
 
@@ -299,21 +302,26 @@ class Economy(commands.Cog, name='Економічні команди'):
         >> .set_exp `40`\n
         >> .set_exp `40` `@Indi Mops`
         """
-        await ctx.channel.purge(limit=1)
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+        
         if user is None:
             user=ctx.author
             cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
             emb = discord.Embed(title = 'Досвід успішно змінено', description=f'Досвід користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.send(embed = emb)
+            await ctx.reply(embed = emb)
             data.commit()
         else:
             cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
             emb = discord.Embed(title = 'Досвід успішно змінено', description=f'Досвід користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.send(embed = emb)
+            await ctx.reply(embed = emb)
             data.commit()
+            
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
     
     @commands.command(name='set_lvl')
-    async def set_xp(self, ctx, count:int, user: discord.Member = None):
+    async def set_lvl(self, ctx, count:int, user: discord.Member = None):
         """Встановлює рівень користувачу
 
         Args:
@@ -324,22 +332,28 @@ class Economy(commands.Cog, name='Економічні команди'):
         >> .set_lvl `40`\n
         >> .set_lvl `40` `@Indi Mops`
         """
-        await ctx.channel.purge(limit=1)
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
         if user is None:
             user=ctx.author
             cur.execute(f'UPDATE users SET lvl = {count} WHERE id = {user.id}')
             emb = discord.Embed(title = 'Рівень успішно змінено', description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.send(embed = emb)
+            await ctx.reply(embed = emb)
             data.commit()
         else:
             cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
             emb = discord.Embed(title = 'Рівень успішно змінено', description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.send(embed = emb)
+            await ctx.reply(embed = emb)
             data.commit()
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
     
     
     @commands.command(alias='ld')
     async def leaderboard(self, ctx):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+            
         count = 0
         count_member = 0
         for i in cur.execute(f'SELECT id FROM users WHERE server_id = {ctx.author.guild.id}'):
@@ -353,7 +367,9 @@ class Economy(commands.Cog, name='Економічні команди'):
                 inline=False
             )
             embed.set_thumbnail(url=ctx.author.guild.icon)
-        await ctx.send(embed=embed)
+        await ctx.reply(embed=embed)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
 
 async def setup(bot):
     await bot.add_cog(Economy(bot))

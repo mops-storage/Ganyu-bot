@@ -7,8 +7,10 @@ import os
 import logging
 import logging.handlers
 from discord.ui import Select, View
+import time
 from time import strftime
 from time import gmtime
+import sqlite3
 
 bot = commands.Bot(settings['prefix'], intents = discord.Intents.all())
 bot.remove_command('help')
@@ -17,16 +19,49 @@ discord.utils.setup_logging(level = logging.INFO, root = False)
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} підключився до Discord.')
-    for guild in bot.guilds:
-        print(guild.id)
-        members_count = 0
-        members_count += len(guild.members)
-            
-        while True: # Status bots in his profile
-            await bot.change_presence(status = discord.Status.online, activity = discord.Game(f"{settings['prefix']}help | v{settings['version']}"))
-            await asyncio.sleep(30)
-            await bot.change_presence(status = discord.Status.online, activity = discord.Activity(type = discord.ActivityType.watching, name = f"за {members_count} користувачів"))
-            await asyncio.sleep(30)
+    
+    data = sqlite3.connect('data.sqlite')#connect to BD
+    cur = data.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS stats_bot (
+        'guilds' INT,
+        'users' INT,
+        'channels' INT,
+        'commands' INT
+        )""")
+    data.commit()
+    
+    async def up_stats():
+        """Оновлює статистику бота кожні 30 секунд
+        """
+        for row in cur.execute(f'SELECT guilds, users, channels, commands FROM stats_bot'):
+            StBguilds = row[0]
+            StBusers = row[1]
+            StBchannels = row[2]
+            StBcommands = row[3]
+        guilds = bot.guilds
+        users = len(bot.users)
+        global channels
+        channels = 0
+        cur.execute(f'SELECT * FROM stats_bot')
+        if cur.fetchone() == None:
+            for guild in guilds:
+                channels += len(guild.text_channels) + len(guild.voice_channels) + len(guild.stage_channels)
+                cur.execute(f"INSERT INTO stats_bot VALUES ({int(len(guilds))}, {int(users)}, {int(channels)}, 0)")
+                data.commit()
+        else:
+            for guild in bot.guilds:
+                channels += len(guild.text_channels) + len(guild.voice_channels) + len(guild.stage_channels)
+                cur.execute(f'UPDATE stats_bot SET guilds = {int(len(guilds))}, users = {int(users)}, channels = {int(channels)}, commands = {StBcommands}')
+                data.commit()
+    
+    while True: # Status bots in his profile
+        await bot.change_presence(status = discord.Status.online, activity = discord.Game(f"{settings['prefix']}help | v{settings['version']}"))
+        await up_stats()
+        await asyncio.sleep(30)
+        
+        await up_stats()
+        await bot.change_presence(status = discord.Status.online, activity = discord.Activity(type = discord.ActivityType.watching, name = f"за {len(bot.users)} користувачів"))
+        await asyncio.sleep(30)
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -48,6 +83,7 @@ async def on_command_error(ctx, error):
             color=0xff0000
         )
         await ctx.reply(embed=embed)
+        print(error)
     
     if isinstance(error, commands.CommandNotFound):
         embed = discord.Embed(
@@ -57,6 +93,7 @@ async def on_command_error(ctx, error):
         )
         
         await ctx.reply(embed=embed)
+        print(error)
         
 async def load_extensions():
     """Load cogs for main file
