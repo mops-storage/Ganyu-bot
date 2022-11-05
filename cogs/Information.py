@@ -1,12 +1,11 @@
-from dataclasses import replace
-from tkinter.tix import Select
-from turtle import colormode
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.ui import Select, View
 import discord
 from config import settings
 import sqlite3
 import time
+from time import strftime
+from discord import app_commands
 
 data = sqlite3.connect('data.sqlite')#connect to BD
 cur = data.cursor()
@@ -20,12 +19,14 @@ class Information(commands.Cog, name='Інформативні команди'):
         print('Information commands - Ready!')
         global start_time
         start_time = int(time.time())
-        
-    @commands.group(name='help', invoke_without_command=True)
-    async def help(self, ctx, command = None):
-        for row in cur.execute(f'SELECT commands FROM stats_bot'):
-            StBcommands = row[0]
-
+    
+    @tasks.loop(seconds=10)
+    async def isync(self, ctx) -> None:
+        fmt = await ctx.bot.tree.sync()
+        print(f'Information: Синхронізовано {fmt} слеш-команд')
+    
+    @app_commands.command(name='help', description='Команда довідка')
+    async def help_(self, interaction: discord.Interaction, command: str = None):
         if command == None:
             menu = Select(
                 placeholder='Виберіть категорію...',
@@ -130,8 +131,7 @@ class Information(commands.Cog, name='Інформативні команди'):
                 inline=False
                 )
             
-            await ctx.defer(ephemeral=True)
-            await ctx.reply(embed=embed, view=view)
+            await interaction.response.send_message(embed=embed, view=view)
         elif command == 'help':
             embed = discord.Embed(
                 title='Перелік всіх команд та категорій',
@@ -168,7 +168,7 @@ class Information(commands.Cog, name='Інформативні команди'):
                 icon_url=settings['avatar']
             )
             
-            await ctx.reply(embed=embed)
+            await interaction.response.send_message(embed=embed)
         elif command == 'info':
             embed = discord.Embed(
                 title=f'Корисна інформація про {settings["name"]}',
@@ -191,64 +191,43 @@ class Information(commands.Cog, name='Інформативні команди'):
                 icon_url=settings['avatar']
             )
             
-            await ctx.reply(embed=embed)
+            await interaction.response.send_message(embed=embed)
+        elif command == 'stats':
+            embed = discord.Embed(
+                title=f'Статистика використання {settings["name"]}',
+                description=f'Показує загальну статистику {settings["name"]}, таку як: кількість серверів, учасників використаних команд і т.д',
+                color=settings['color']
+            )
+            
+            embed.set_author(
+                name=f'Команда "{settings["prefix"]}stats"'
+            )
+            embed.add_field(
+                name='Використання',
+                value=f'{settings["prefix"]}stats',
+                inline=False
+            )
+            
+            embed.set_thumbnail(url=settings['avatar'])
+            embed.set_footer(
+                text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
+                icon_url=settings['avatar']
+            )
+            
+            await interaction.response.send_message(embed=embed)
         else:
-            await ctx.reply(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000))
-        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
-        data.commit()
+            await interaction.response.send_message(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000))
     
-    @help.command(name='information')
-    async def information(self, ctx):
-        for row in cur.execute(f'SELECT commands FROM stats_bot'):
-            StBcommands = row[0]
-        
-        embed = discord.Embed(
-                    title='Доступні команди категорії 📃Інформація',
-                    description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<назва команди>`',
-                    color=settings['color']
-                )
-        embed.set_thumbnail(
-            url=settings['avatar']
-        )
-        embed.set_footer(
-            text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
-            icon_url=settings['avatar']
-        )
-        embed.add_field(
-            name=f'{settings["prefix"]}help',
-            value='Список всі доступних команд та категорій',
-            inline=False
-        )
-        embed.add_field(
-            name=f'{settings["prefix"]}info',
-            value=f'Корисна інформація про {settings["name"]}',
-            inline=False
-        )
-        embed.add_field(
-            name=f'{settings["prefix"]}stats',
-            value=f'Статистика використання {settings["name"]}',
-            inline=False
-        )
-        embed.add_field(
-            name=f'{settings["prefix"]}server',
-            value='Інформація про поточний сервер',
-            inline=False
-        )
-        embed.add_field(
-            name=f'{settings["prefix"]}user',
-            value='Інформація про учасника',
-            inline=False
-        )
-        
-        await ctx.reply(embed=embed)
-        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
-        data.commit()
+    @commands.command()
+    async def iisync(self, ctx) -> None:
+        fmt = await ctx.bot.tree.sync()
+        print(f'Information: Синхронізовано {len(fmt)} слеш-команд')
+        await ctx.reply('Синхронізовано')
     
     @commands.command(name='info')
     async def info(self, ctx):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
-            
         embed = discord.Embed(
             title=settings['name'],
             description=f'Привіт, я Ґанью секретарка Цісін в Ліюе. Моє завдання допомагати мандрівникам освоюватися з дивовижним світом Тейват\n\nМій префікс `{settings["prefix"]}`. Якщо ти хочеш дізнатися всі мої команди тоді можеш скористатися **{settings["prefix"]}help**. Або скористайся **{settings["prefix"]}starjour**, щоб розпочати свою подорож<a:ganyuroll:1037043774850867241>',
@@ -318,6 +297,92 @@ class Information(commands.Cog, name='Інформативні команди'):
             name='Платформена',
             value=f'Команд використано: {"{0:,}".format(StBcommands + 1).replace(",", " ")}\nЗатримка: {round(ping, 2)} мс.\nЗапущений: <t:{start_time}:R>'
         )
+        
+        await ctx.reply(embed=embed)
+        data.commit()
+    
+    @commands.command()
+    async def server(self, ctx):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):# витягуємо кількість введених команд
+            StBcommands = row[0]
+        
+
+        snsfwlvl = str(ctx.guild.explicit_content_filter)
+        if snsfwlvl == 'all_members':
+            snsfwlvl = 'Перевіряти кожного учасника'
+        elif snsfwlvl == 'no_role':
+            snsfwlvl = 'Перевіряти учасників без ролей'
+        elif snsfwlvl == 'disabled':
+            snsfwlvl = 'Не встановлено'
+        else:
+            snsfwlvl = 'Не знайдено'
+        
+        text_channels = len(ctx.guild.text_channels)
+        voice_channels = len(ctx.guild.voice_channels)
+        stage_channels = len(ctx.guild.stage_channels)
+        total_channels = text_channels + voice_channels + stage_channels
+        
+        total_members = ctx.guild.members
+        online = 0
+        idle = 0
+        offline = 0
+        humans = 0
+        bots = 0
+        for member in total_members:
+            if member.status == 'online':
+                online+=1
+            if member.status == 'idle':
+                idle+=1
+            if member.status == 'oflline':
+                oflline+=1
+            if member.bot is True:
+                bot+=1
+            if member.bot is False:
+               humans+=1
+        
+        embed = discord.Embed(
+            color = settings['color'],
+            title = f"Інформація про сервер {ctx.guild.name}"
+        )
+        
+        created_at = ctx.guild.created_at
+        owner = ctx.guild.owner_id
+        embed.add_field(
+            name = f"Власник сервера", 
+            value = owner.mention,
+            inline = True
+            )
+        embed.add_field(
+            name = "Id", 
+            value = ctx.guild.id, 
+            inline = True
+            )
+        embed.add_field(
+            name = "Створений: ", 
+            value = strftime("%d.%m.%Y %H:%M:%S", time.gmtime(created_at)), 
+            inline = True
+            )
+        embed.add_field(
+            name = "Перевірка: ", 
+            value = snsfwlvl, 
+            inline = True
+            )
+        embed.add_field(
+            name = "Учасники:", 
+            value = f"<:total_members:1038376493669154836>Всього: **{total_members}**\n<:members:1038376476870979594>Учасників: **{humans}**\n<:bots:1038376472521482263>Ботів: **{bots}**", 
+            inline = True
+            )
+        embed.add_field(
+            name = "Статуси:", 
+            value = f"<:ofline:1038376481774120970>Онлайн: **{online}**\n<:idle:1038376474958381056>Відійшли: **{idle}**\n<:ofline:1038376481774120970>Не в мережі: **{offline}**", 
+            inline = True
+            )
+        embed.add_field(
+            name = "Канали:", 
+            value = f"<:total_channels:1038376491576205375>Всього: **{total_channels}**\n<:text_channels:1038376489399357504>Текстові: **{text_channels}**\n<:voice_channels:1038376495414001724>Голосові: **{voice_channels}**"
+            )
+        
+        embed.set_thumbnail(url = ctx.guild.icon)
         
         await ctx.reply(embed=embed)
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')

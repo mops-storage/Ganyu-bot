@@ -5,16 +5,16 @@ from config import settings
 import asyncio
 import os
 import logging
-import logging.handlers
-from discord.ui import Select, View
-import time
 from time import strftime
 from time import gmtime
 import sqlite3
 
-bot = commands.Bot(settings['prefix'], intents = discord.Intents.all())
+bot = commands.Bot(commands.when_mentioned_or(settings['prefix']), intents = discord.Intents.all())
 bot.remove_command('help')
 discord.utils.setup_logging(level = logging.INFO, root = False)
+
+data = sqlite3.connect('data.sqlite')#connect to BD
+cur = data.cursor()
 
 @bot.event
 async def on_ready():
@@ -94,7 +94,16 @@ async def on_command_error(ctx, error):
         
         await ctx.reply(embed=embed)
         print(error)
-        
+
+@bot.event
+async def on_command_completion(ctx):
+    for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+    cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+    data.commit()
+    print(f'\nВиконалась команда\nВсього виконано: {StBcommands + 1}\n')
+
+
 async def load_extensions():
     """Load cogs for main file
     """
