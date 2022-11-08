@@ -6,8 +6,7 @@ from asyncio import sleep
 import sqlite3
 import random
 import easy_pil
-import datetime
-from discord.utils import get
+from io import BytesIO
 
 
 data = sqlite3.connect('data.sqlite')# connected to BD
@@ -187,7 +186,6 @@ class Economy(commands.Cog, name='Економічні команди'):
                         fill = "#00fa81",
                         radius = 20
                     )
-                    print(step)
                 background.text((270, 120), f"{user.name}#{user.discriminator}", font = poppins, color = "#00fa81")
                 background.text(
                     (870, 125),
@@ -204,8 +202,14 @@ class Economy(commands.Cog, name='Економічні команди'):
                     easy_pil.Text(f"{lvl}", color = "#1EAAFF", font = poppins),
                 ]
                 background.multicolor_text((850, 30), texts = rank_level_texts, align = "right")
-                background.save("card.png")
-                await ctx.reply(file = discord.File(fp = "card.png"))
+                #background.save("card.png")
+                
+                file = BytesIO()
+                background.save(file, "PNG")
+                file.seek(0)
+                
+                await ctx.reply(file = discord.File(file, filename="image.png"))
+                file.close()
         else:
             for row in cur.execute(f'SELECT name, cash, money, xp, lvl FROM users WHERE id = {user.id}'):
                 name = row[0]
@@ -285,8 +289,12 @@ class Economy(commands.Cog, name='Економічні команди'):
                     easy_pil.Text(f"{lvl}", color = "#1EAAFF", font = poppins),
                 ]
                 background.multicolor_text((850, 30), texts = rank_level_texts, align = "right")
-                background.save("card.png")
-                await ctx.reply(file = discord.File(fp = "card.png"))
+                file = BytesIO()
+                background.save(file, "PNG")
+                file.seek(0)
+                
+                await ctx.reply(file = discord.File(file, filename="image.png"))
+                file.close()
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
         

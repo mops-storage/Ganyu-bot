@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-import discord
+# -*- coding: utf-8 -*-
+import discord
 import discord
 from discord.ext import commands, tasks
 from discord.ui import Select, View, Button
