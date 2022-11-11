@@ -4,13 +4,13 @@ import discord
 from config import settings
 import sqlite3
 import time
-from time import strftime
 from discord import app_commands
 
 data = sqlite3.connect('data.sqlite')#connect to BD
 cur = data.cursor()
 
-class Information(commands.Cog, name='Інформативні команди'):
+class Information(commands.Cog):
+    """information module"""
     def __init__(self, bot):
         self.bot = bot
     
@@ -20,13 +20,8 @@ class Information(commands.Cog, name='Інформативні команди'):
         global start_time
         start_time = int(time.time())
     
-    @tasks.loop(seconds=10)
-    async def isync(self, ctx) -> None:
-        fmt = await ctx.bot.tree.sync()
-        print(f'Information: Синхронізовано {fmt} слеш-команд')
-    
     @app_commands.command(name='help', description='Команда довідка')
-    async def help_(self, interaction: discord.Interaction, command: str = None):
+    async def help(self, interaction: discord.Interaction, command: str = None):
         if command == None:
             menu = Select(
                 placeholder='Виберіть категорію...',
@@ -131,7 +126,7 @@ class Information(commands.Cog, name='Інформативні команди'):
                 inline=False
                 )
             
-            await interaction.response.send_message(embed=embed, view=view)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         elif command == 'help':
             embed = discord.Embed(
                 title='Перелік всіх команд та категорій',
@@ -168,7 +163,7 @@ class Information(commands.Cog, name='Інформативні команди'):
                 icon_url=settings['avatar']
             )
             
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         elif command == 'info':
             embed = discord.Embed(
                 title=f'Корисна інформація про {settings["name"]}',
@@ -191,7 +186,7 @@ class Information(commands.Cog, name='Інформативні команди'):
                 icon_url=settings['avatar']
             )
             
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         elif command == 'stats':
             embed = discord.Embed(
                 title=f'Статистика використання {settings["name"]}',
@@ -214,23 +209,17 @@ class Information(commands.Cog, name='Інформативні команди'):
                 icon_url=settings['avatar']
             )
             
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
-            await interaction.response.send_message(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000))
+            await interaction.response.send_message(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000), ephemeral=True)
     
-    @commands.command()
-    async def iisync(self, ctx) -> None:
-        fmt = await ctx.bot.tree.sync()
-        print(f'Information: Синхронізовано {len(fmt)} слеш-команд')
-        await ctx.reply('Синхронізовано')
-    
-    @commands.command(name='info')
-    async def info(self, ctx):
+    @app_commands.command(name='info', description=f'Корисна інформація про {settings["name"]}')
+    async def info_(self, interaction: discord.Interaction):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
         embed = discord.Embed(
             title=settings['name'],
-            description=f'Привіт, я Ґанью секретарка Цісін в Ліюе. Моє завдання допомагати мандрівникам освоюватися з дивовижним світом Тейват\n\nМій префікс `{settings["prefix"]}`. Якщо ти хочеш дізнатися всі мої команди тоді можеш скористатися **{settings["prefix"]}help**. Або скористайся **{settings["prefix"]}starjour**, щоб розпочати свою подорож<a:ganyuroll:1037043774850867241>',
+            description=f'Привіт, я Ґанью секретарка Цісін в Ліюе. Моє завдання допомагати мандрівникам освоюватися з дивовижним світом Тейват\n\nМій префікс `{settings["prefix"]}`. Якщо ти хочеш дізнатися всі мої команди тоді можеш скористатися **{settings["prefix"]}help**. Або скористайся **{settings["prefix"]}starjour**, щоб розпочати свою подорож<a:ganyuroll:1037043774850867241>\n{interaction.expires_at}',
             color=settings['color']
         )
         
@@ -265,13 +254,14 @@ class Information(commands.Cog, name='Інформативні команди'):
             value=f'[Patreon]({settings["patreon"]})\n[Diaka]({settings["diaka"]})'
         )
         
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
     
-    @commands.command()
-    async def stats(self, ctx):
+    @app_commands.command(name='stats', description=f'Статистика {settings["name"]}')
+    async def stats_(self, interaction: discord.Interaction):
         """Перевіряє чи працює Cog система"""
+        ctx = await self.bot.get_context(interaction)
         ping = self.bot.latency
         for row in cur.execute(f'SELECT guilds, users, channels, commands FROM stats_bot'):
             StBguilds = row[0]
@@ -298,58 +288,65 @@ class Information(commands.Cog, name='Інформативні команди'):
             value=f'Команд використано: {"{0:,}".format(StBcommands + 1).replace(",", " ")}\nЗатримка: {round(ping, 2)} мс.\nЗапущений: <t:{start_time}:R>'
         )
         
-        await ctx.reply(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
     
-    @commands.command()
-    async def server(self, ctx):
-        for row in cur.execute(f'SELECT commands FROM stats_bot'):# витягуємо кількість введених команд
-            StBcommands = row[0]
-        
-
-        snsfwlvl = str(ctx.guild.explicit_content_filter)
-        if snsfwlvl == 'all_members':
-            snsfwlvl = 'Перевіряти кожного учасника'
-        elif snsfwlvl == 'no_role':
-            snsfwlvl = 'Перевіряти учасників без ролей'
-        elif snsfwlvl == 'disabled':
-            snsfwlvl = 'Не встановлено'
-        else:
-            snsfwlvl = 'Не знайдено'
-        
+    @app_commands.command(name='server', description='Детальна інформація про сервер', auto_locale_strings=True)
+    async def server_(self, interaction: discord.Interaction):
+        ctx = await self.bot.get_context(interaction)
         text_channels = len(ctx.guild.text_channels)
         voice_channels = len(ctx.guild.voice_channels)
         stage_channels = len(ctx.guild.stage_channels)
         total_channels = text_channels + voice_channels + stage_channels
         
-        total_members = ctx.guild.members
-        online = 0
-        idle = 0
-        offline = 0
-        humans = 0
-        bots = 0
-        for member in total_members:
-            if member.status == 'online':
-                online+=1
-            if member.status == 'idle':
-                idle+=1
-            if member.status == 'oflline':
-                oflline+=1
-            if member.bot is True:
-                bot+=1
-            if member.bot is False:
-               humans+=1
+        total = len(ctx.guild.members)
+        online = len(list(filter(lambda m: str(m.status) == "online", ctx.guild.members)))
+        idle = len(list(filter(lambda m: str(m.status) == "idle", ctx.guild.members)))
+        dnd = len(list(filter(lambda m: str(m.status) == "dnd", ctx.guild.members)))
+        offline = len(list(filter(lambda m: str(m.status) == "offline", ctx.guild.members)))
+        humans = len(list(filter(lambda m: not m.bot, ctx.guild.members)))
+        bots = len(list(filter(lambda m: m.bot, ctx.guild.members)))
+        
+        snsfwlvl = str(ctx.guild.explicit_content_filter)
+        if snsfwlvl == "all_members":
+            snsfwlvl = "Перевіряти кожного учасника"
+        elif snsfwlvl == "no_role":
+            snsfwlvl = "Перевіряти учасників без ролей"
+        elif snsfwlvl == "disabled":
+            snsfwlvl = "Не встановлено"
+        else:
+            snsfwlvl = "Не знайдено"
         
         embed = discord.Embed(
             color = settings['color'],
             title = f"Інформація про сервер {ctx.guild.name}"
         )
         
+        schannel_rules = str(ctx.guild.rules_channel)
+        if schannel_rules == "None":
+            schannel_rules = "Немає"
+        else:
+            schannel_rules = f"<#{ctx.guild.rules_channel.id}>"
+        
+        sverification = str(ctx.guild.verification_level)
+        if sverification == "extreme":
+            sverification = "Найвищий"
+        elif sverification == "high":
+            sverification = "Високий"
+        elif sverification == "medium":
+            sverification = "Середній"
+        elif sverification == "low":
+            sverification = "Низький"
+        elif sverification == "none":
+            sverification = "Не встановлений"
+        else:
+            sverification = "Не знайдено"
+        
         created_at = ctx.guild.created_at
-        owner = ctx.guild.owner_id
         embed.add_field(
-            name = f"Власник сервера", 
-            value = owner.mention,
+            name = "Власник сервера", 
+            value = ctx.guild.owner.mention,
             inline = True
             )
         embed.add_field(
@@ -359,39 +356,40 @@ class Information(commands.Cog, name='Інформативні команди'):
             )
         embed.add_field(
             name = "Створений: ", 
-            value = strftime("%d.%m.%Y %H:%M:%S", time.gmtime(created_at)), 
+            value = f'<t:{int(created_at.timestamp())}:f>', 
             inline = True
             )
         embed.add_field(
-            name = "Перевірка: ", 
-            value = snsfwlvl, 
+            name = "Канал з правилами:",
+            value = schannel_rules,
+            inline = True)
+        embed.add_field(
+            name = "Перевірка:", 
+            value = snsfwlvl,
             inline = True
             )
+        embed.add_field(
+            name = "Рівень модерації:",
+            value = sverification,
+            inline = True)
         embed.add_field(
             name = "Учасники:", 
-            value = f"<:total_members:1038376493669154836>Всього: **{total_members}**\n<:members:1038376476870979594>Учасників: **{humans}**\n<:bots:1038376472521482263>Ботів: **{bots}**", 
+            value = f'<:total_members:1038376493669154836> Всього: **{total}**\n<:members:1038376476870979594> Учасників: **{humans}**\n<:bots:1038376472521482263> Ботів: **{bots}**',
             inline = True
             )
         embed.add_field(
             name = "Статуси:", 
-            value = f"<:ofline:1038376481774120970>Онлайн: **{online}**\n<:idle:1038376474958381056>Відійшли: **{idle}**\n<:ofline:1038376481774120970>Не в мережі: **{offline}**", 
+            value = f"<:online:1038376483758030898>Онлайн: **{online}**\n<:idle:1038376474958381056>Відійшли: **{idle}**\n<:ofline:1038376481774120970>Не в мережі: **{offline}**", 
             inline = True
             )
         embed.add_field(
             name = "Канали:", 
-            value = f"<:total_channels:1038376491576205375>Всього: **{total_channels}**\n<:text_channels:1038376489399357504>Текстові: **{text_channels}**\n<:voice_channels:1038376495414001724>Голосові: **{voice_channels}**"
+            value = f"<:total_channels:1038376491576205375> Всього: **{total_channels}**\n<:text_channels:1038376489399357504> Текстові: **{text_channels}**\n<:voice_channels:1038376495414001724> Голосові: **{voice_channels}**"
             )
         
         embed.set_thumbnail(url = ctx.guild.icon)
         
-        await ctx.reply(embed=embed)
-        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
-        data.commit()
-    
-    @commands.command()
-    @commands.cooldown(1, 604700, commands.BucketType.user)
-    async def cool(self, ctx):
-        await ctx.reply(content = f'<t:{int(time.time()) + 30}:R>', delete_after = 30)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         
 async def setup(bot):
     await bot.add_cog(Information(bot))

@@ -184,6 +184,11 @@ class Test_Commands(commands.Cog, name='Команди розробника'):
         data.commit()
     """
 
+    @app_commands.command(name='kick', description='Тест парметрів')
+    async def kick_(self, interaction: discord.Interaction, user: discord.Member, channel: discord.TextChannel, reason: str = None):
+        #ctx = await self.bot.get_context(interaction)
+        
+        await interaction.response.send_message(content=f'Вигнато користувача {channel} {user.name} за причиною:\n`{reason}`')
 
 # Error callback
     @sync.error
