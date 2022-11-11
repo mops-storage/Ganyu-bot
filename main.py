@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from config import settings
 import asyncio
 import os
@@ -8,8 +8,9 @@ import logging
 from time import strftime
 from time import gmtime
 import sqlite3
+import random
 
-bot = commands.Bot(commands.when_mentioned_or(settings['prefix']), intents = discord.Intents.all())
+bot = commands.Bot(commands.when_mentioned_or('jabskjdbasjbdjasbdhbasdjbsahbdashdasbjdb'), intents = discord.Intents.all())
 bot.remove_command('help')
 discord.utils.setup_logging(level = logging.INFO, root = False)
 
@@ -29,15 +30,13 @@ async def on_ready():
         'commands' INT
         )""")
     data.commit()
-    
-    async def up_stats():
+    bot.loop.create_task(ch_pr())
+
+async def up_db():
         """Оновлює статистику бота кожні 30 секунд
         """
-        for row in cur.execute(f'SELECT guilds, users, channels, commands FROM stats_bot'):
-            StBguilds = row[0]
-            StBusers = row[1]
-            StBchannels = row[2]
-            StBcommands = row[3]
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
         guilds = bot.guilds
         users = len(bot.users)
         global channels
@@ -53,15 +52,32 @@ async def on_ready():
                 channels += len(guild.text_channels) + len(guild.voice_channels) + len(guild.stage_channels)
                 cur.execute(f'UPDATE stats_bot SET guilds = {int(len(guilds))}, users = {int(users)}, channels = {int(channels)}, commands = {StBcommands}')
                 data.commit()
+        print('Update databes - Work')
+        await asyncio.sleep(60)
     
-    while True: # Status bots in his profile
-        await bot.change_presence(status = discord.Status.online, activity = discord.Game(f"{settings['prefix']}help | v{settings['version']}"))
-        await up_stats()
+
+async def sync():
+    """Synchronization of slash commands"""
+    fmt = await bot.tree.sync()
+    print(f'\033[34mInformation\033[0m: Синхронізовано {len(fmt)} слеш-команд')
+    await asyncio.sleep(10)
+
+async def ch_pr():
+    await bot.wait_until_ready()
+    
+    statuses = [f"{settings['prefix']}help | v{settings['version']}", f"за {len(bot.users)} користувачів"]
+    while not bot.is_closed():
+        status = random.choice(statuses)
+        if status == statuses[0]:
+            await bot.change_presence(status = discord.Status.online, activity = discord.Game(status))
+        else:
+            await bot.change_presence(status = discord.Status.online, activity = discord.Activity(type = discord.ActivityType.watching, name = status))
+        print(f'\033[33m{settings["name"]}\033[0m: Bot changed the status to \033[11m{status}\033[0m')
         await asyncio.sleep(30)
         
-        await up_stats()
-        await bot.change_presence(status = discord.Status.online, activity = discord.Activity(type = discord.ActivityType.watching, name = f"за {len(bot.users)} користувачів"))
-        await asyncio.sleep(30)
+        bot.loop.create_task(sync())
+        bot.loop.create_task(up_db())
+
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -102,7 +118,6 @@ async def on_command_completion(ctx):
     cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
     data.commit()
     print(f'\nВиконалась команда\nВсього виконано: {StBcommands + 1}\n')
-
 
 async def load_extensions():
     """Load cogs for main file
