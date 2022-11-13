@@ -1,0 +1,48 @@
+* {
+    scrollbar-width: thin;
+	scrollbar-color: #809dd5 #08090d;
+};
+
+.left-footer-stack {
+    width: 320px;
+}
+
+.social i, svg {
+    transition: all .2s;
+}
+
+.social i:hover, svg:hover {
+    color: rgba(108,117,125, 1);
+}
+
+.footer-links a, b {
+    transition: all .1s;
+}
+
+.footer-link:hover {
+    text-decoration: underline!important;
+}
+
+.menu-con-divider {
+    position: relative;
+    width: 1px;
+    height: auto;
+    border-radius: 4px;
+    color: #fff;
+    border-bottom: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.381);
+    margin-top: .5rem;
+    margin-top: 0;
+}
+
+.copy:hover {
+    color: rgb(203, 203, 203)!important;
+}
+
+.img-fluid {
+    transition: all .5s;
+}
+
+.img-fluid:hover {
+    scale: 1.02!important;
+}
