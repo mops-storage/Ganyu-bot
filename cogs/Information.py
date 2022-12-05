@@ -5,6 +5,8 @@ from config import settings
 import sqlite3
 import time
 from discord import app_commands
+import typing
+import requests
 
 data = sqlite3.connect('data.sqlite')#connect to BD
 cur = data.cursor()
@@ -13,6 +15,12 @@ class Information(commands.Cog):
     """information module"""
     def __init__(self, bot):
         self.bot = bot
+        self.user_info = app_commands.ContextMenu(
+            name='Переглянути іфнформацію',
+            callback=self.user_info_callback
+        )
+        self.bot.tree.add_command(self.user_info)    
+        
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -213,6 +221,14 @@ class Information(commands.Cog):
         else:
             await interaction.response.send_message(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000), ephemeral=True)
     
+    @help.autocomplete("command")
+    async def help_autocomplete(self, interaction: discord.Interaction, current: str) -> typing.List[app_commands.Choice[str]]:
+        data = []
+        for command_choice in ['help', 'info', 'stats']:
+            if current.lower() in command_choice.lower():
+                data.append(app_commands.Choice(name=command_choice, value=command_choice))
+        return data    
+    
     @app_commands.command(name='info', description=f'Корисна інформація про {settings["name"]}')
     async def info_(self, interaction: discord.Interaction):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
@@ -292,8 +308,11 @@ class Information(commands.Cog):
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
     
-    @app_commands.command(name='server', description='Детальна інформація про сервер', auto_locale_strings=True)
+    @app_commands.command(name='server', description='Детальна інформація про сервер')
     async def server_(self, interaction: discord.Interaction):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+        
         ctx = await self.bot.get_context(interaction)
         text_channels = len(ctx.guild.text_channels)
         voice_channels = len(ctx.guild.voice_channels)
@@ -390,6 +409,152 @@ class Information(commands.Cog):
         embed.set_thumbnail(url = ctx.guild.icon)
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
+
+    @app_commands.command(name='user', description=f'Детальна інформація про користувача')
+    async def user_(self, interaction: discord.Interaction, user: discord.Member = None):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
         
+        ctx = await self.bot.get_context(interaction)
+        
+        if user is None:
+            user = ctx.author
+            
+        for bio in cur.execute(f'SELECT bio FROM users WHERE id = {user.id}'):
+            if bio[0] == 'None':
+                bio = f"Ви можете додати сюди якусь інформацію про себе. Скориставшись `{settings['prefix']}bio`"
+        headers = {"Authorization": f"Bot {settings['token']}"}
+        req = requests.get(f"https://discord.com/api/v9/users/{user.id}", headers=headers).json()
+        
+        def rgb(hex):
+            rgb = []
+            for i in (0, 2, 4):
+                decimal = int(hex[i:i+2], 16)
+                rgb.append(decimal)
+            return rgb
+        
+        if req['banner_color'] is None:
+            embed = discord.Embed(description=bio, color=settings['color'])
+        else:
+            embed = discord.Embed(description=bio, color=discord.Color.from_rgb(rgb(req['banner_color'].replace('#', ''))[0], rgb(req['banner_color'].replace('#', ''))[1], rgb(req['banner_color'].replace('#', ''))[2]))
+        
+        #global user_status
+        user_status = interaction.guild.get_member(user.id).status
+        if user_status == discord.Status.online:
+            user_status = "<:online:1038376483758030898>В мережі"
+        elif user_status == discord.Status.offline or user_status == discord.Status.invisible:
+            user_status = "<:ofline:1038376481774120970>Не в мережі"
+        elif user_status == discord.Status.idle:
+            user_status = "<:idle:1038376474958381056>Відійшов"
+        elif user_status == discord.Status.dnd or user_status == discord.Status.do_not_disturb:
+            user_status = "<:dnd:1048546187487227914>Не турбувати"
+
+        
+        print(interaction.guild.get_member(user.id).activities)
+        global ca, spotify, game
+        ca = ''
+        spotify = ''
+        game = ''
+        for active in interaction.guild.get_member(user.id).activities:
+            if isinstance(active, discord.CustomActivity):
+                global ca_emoji_type, ca_emoji_id
+                ca_emoji_type = ''
+                ca_emoji_id = ''
+                if active.emoji is None: # Checks whether the user status is emoji
+                    pass
+                else:
+                    if active.emoji.animated is True: # Checks whether emoji is animated
+                        ca_emoji_type = 'a'
+                    ca_emoji_name = active.emoji.name
+                    ca_emoji_id = active.emoji.id
+                ca_name = active.name
+                global ca_emoji
+                ca_emoji = None
+                if self.bot.get_emoji(ca_emoji_id) == None:# Can a bot to reflect that emoji
+                    ca_emoji = ''
+                else:
+                    ca_emoji =  f'<{ca_emoji_type}:{ca_emoji_name}:{ca_emoji_id}>'
+
+                if ca_name is None:
+                    if self.bot.get_emoji(ca_emoji_id) == None:
+                        ca = ''
+                    else:
+                        ca = f'**Користувацький статус**: {ca_emoji}\n'
+                else:
+                    ca = f'**Користувацький статус:** {ca_emoji}{ca_name}\n'
+
+            if isinstance(active, discord.Spotify):
+                print(active.title)
+                print(active.artist)
+                artist = active.artist
+                if len(artist.split('; ')) > 1:
+                    artist = artist.split('; ')
+                    artist = ", ".join(artist)
+                else:
+                    artist = f'[{active.artist}](https://open.spotify.com/search/{active.artist})'
+                        
+                spotify = f'**Слухає:** <:spotify:1049105195906379837> [{active.title}](https://open.spotify.com/track/{active.track_id}) - {artist}\n'
+            
+            if isinstance(active, discord.Game):
+                game = f'**Грає в:** {active.name}\n'
+          
+        embed.add_field(
+            name='Основна інформація',
+            value=f'**Ім\'я користувача:** {user.name}#{user.discriminator}\n**Статус:** {user_status}\n{ca}{spotify}{game}**Приєднаввся:** <t:{int(user.joined_at.timestamp())}:D> (<t:{int(user.joined_at.timestamp())}:R>)\n**Зареєструвався:** <t:{int(user.created_at.timestamp())}:D> (<t:{int(user.created_at.timestamp())}:R>)'
+        )
+        
+        embed.set_author(
+            name=f'Інформація про {user.name}',
+            icon_url=user.avatar
+        )
+        
+        embed.set_thumbnail(
+            url=user.avatar
+        )
+        
+        if req['banner'] is None:
+            pass
+        else:
+            embed.set_image(
+            url=f'https://cdn.discordapp.com/banners/{user.id}/{req["banner"]}?size=2048'
+        )
+        
+        embed.set_footer(
+            text=f'ID: {user.id}'
+        )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()  
+
+    async def user_info_callback(self, interaction: discord.Interaction, user: discord.User):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+        
+        ctx = await self.bot.get_context(interaction)
+        for bio in cur.execute(f'SELECT bio FROM users WHERE id = {user.id}'):
+            if bio[0] == 'None':
+                bio = f"Ви можете додати сюди якусь інформацію про себе. Скориставшись `{settings['prefix']}bio`"
+        headers = {"Authorization": f"Bot {settings['token']}"}
+        req = requests.get(f"https://discord.com/api/v9/users/{user.id}", headers=headers).json()
+        
+        def rgb(hex):
+            rgb = []
+            for i in (0, 2, 4):
+                decimal = int(hex[i:i+2], 16)
+                rgb.append(decimal)
+            return rgb
+        
+        if req['banner_color'] is None:
+            embed = discord.Embed(title=f'Інформація про {user.name}', description=bio, color=settings['color'])
+        else:
+            embed = discord.Embed(title=f'Інформація про {user.name}', description=bio, color=discord.Color.from_rgb(rgb(req['banner_color'].replace('#', ''))[0], rgb(req['banner_color'].replace('#', ''))[1], rgb(req['banner_color'].replace('#', ''))[2]))
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
+
 async def setup(bot):
     await bot.add_cog(Information(bot))

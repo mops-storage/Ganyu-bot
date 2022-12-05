@@ -23,7 +23,8 @@ cur.execute("""CREATE TABLE IF NOT EXISTS users (
         'xp' INT,
         'lvl' INT,
         'bot' TEXT,
-        'server_id' INT
+        'server_id' INT,
+        'bio' TEXT
         )""")
 
 data.commit()
@@ -40,7 +41,7 @@ class Economy(commands.Cog, name='Економічні команди'):
             for member in guild.members:
                 cur.execute(f"SELECT id FROM users where id={member.id}")
                 if cur.fetchone() == None:
-                    cur.execute(f"INSERT INTO users VALUES ({member.id}, '{member.name}', '<@{member.id}>', '{member.avatar}', '{member.created_at}', '{member.joined_at}', 200, 0, 0, 1, '{member.bot}', {guild.id})")
+                    cur.execute(f"INSERT INTO users VALUES ({member.id}, '{member.name}', '<@{member.id}>', '{member.avatar}', '{member.created_at}', '{member.joined_at}', 200, 0, 0, 1, '{member.bot}', {guild.id}, 'None')")
                 else:
                     pass
                 data.commit()
@@ -54,7 +55,7 @@ class Economy(commands.Cog, name='Економічні команди'):
         """
         cur.execute(f'SELECT id FROM users WHERE id = {member.id}')
         if cur.fetchone() == None:
-            cur.execute(f"INSERT INTO users VALUES (?, '{member.name}', '<@{member.id}>', '{member.avatar}', '{member.create_at}', '{member.joined_at}', 200, 0, 0, 1, '{member.bot}', {member.guild.id})",({member.id}, '{member.name}', '<@{member.id}>', '{member.avatar}', '{member.create_at}', '{member.joined_at}', 200, 0, 0, 1, '{member.bot}', {member.guild.id}))
+            cur.execute(f"INSERT INTO users VALUES (?, '{member.name}', '<@{member.id}>', '{member.avatar}', '{member.create_at}', '{member.joined_at}', 200, 0, 0, 1, '{member.bot}', {member.guild.id})",({member.id}, '{member.name}', '<@{member.id}>', '{member.avatar}', '{member.create_at}', '{member.joined_at}', 200, 0, 0, 1, '{member.bot}', {member.guild.id}, 'None'))
             data.commit()
         else:
             pass

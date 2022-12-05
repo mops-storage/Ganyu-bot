@@ -9,8 +9,9 @@ from time import strftime
 from time import gmtime
 import sqlite3
 import random
+from discord import app_commands
 
-bot = commands.Bot(commands.when_mentioned_or('jabskjdbasjbdjasbdhbasdjbsahbdashdasbjdb'), intents = discord.Intents.all())
+bot = commands.Bot(commands.when_mentioned_or('.'), intents = discord.Intents.all())
 bot.remove_command('help')
 discord.utils.setup_logging(level = logging.INFO, root = False)
 
@@ -46,12 +47,11 @@ async def up_db():
             for guild in guilds:
                 channels += len(guild.text_channels) + len(guild.voice_channels) + len(guild.stage_channels)
                 cur.execute(f"INSERT INTO stats_bot VALUES ({int(len(guilds))}, {int(users)}, {int(channels)}, 0)")
-                data.commit()
         else:
             for guild in bot.guilds:
                 channels += len(guild.text_channels) + len(guild.voice_channels) + len(guild.stage_channels)
                 cur.execute(f'UPDATE stats_bot SET guilds = {int(len(guilds))}, users = {int(users)}, channels = {int(channels)}, commands = {StBcommands}')
-                data.commit()
+        data.commit()
         print('Update databes - Work')
         await asyncio.sleep(60)
     
@@ -125,6 +125,7 @@ async def load_extensions():
     for filename in os.listdir('./cogs'):
         if filename.endswith('.py'):
             await bot.load_extension(f'cogs.{filename[:-3]}')
+
 
 async def main():
     await load_extensions()

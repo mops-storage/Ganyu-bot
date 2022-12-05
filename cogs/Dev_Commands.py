@@ -7,6 +7,7 @@ from discord import app_commands
 import config
 from config import settings
 import sqlite3
+import requests
 
 data = sqlite3.connect('data.sqlite')#connect to BD
 cur = data.cursor()
@@ -184,6 +185,12 @@ class Test_Commands(commands.Cog, name='Команди розробника'):
         data.commit()
     """
 
+    @commands.command()
+    async def get_user(self, ctx, user: discord.Member):
+            headers = {"Authorization": f"Bot {settings['token']}"}
+            req = requests.get(f"https://discord.com/api/v9/users/{user.id}", headers=headers).json()
+            await ctx.reply(req)
+
     @app_commands.command(name='kick', description='Тест парметрів')
     async def kick_(self, interaction: discord.Interaction, user: discord.Member, channel: discord.TextChannel, reason: str = None):
         #ctx = await self.bot.get_context(interaction)
@@ -230,7 +237,7 @@ class Test_Commands(commands.Cog, name='Команди розробника'):
                 color=0xff0000
             )
             await ctx.reply(embed=embed)
-    
+
     @select_menu.error
     async def select_menu_error(self, ctx, error):
         if isinstance(error, commands.NotOwner):
