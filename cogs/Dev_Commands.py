@@ -191,6 +191,11 @@ class Test_Commands(commands.Cog, name='Команди розробника'):
             req = requests.get(f"https://discord.com/api/v9/users/{user.id}", headers=headers).json()
             await ctx.reply(req)
 
+    @app_commands.command(name='nick', description='Змінна нікнейму')
+    async def nick(self, interaction: discord.Interaction, user: discord.Member, nick: str):
+        await user.edit(nick=nick)
+        await interaction.response.send_message(content=f'Користувачу {user.name} було змінено нікнейм на {nick}')
+    
     @app_commands.command(name='kick', description='Тест парметрів')
     async def kick_(self, interaction: discord.Interaction, user: discord.Member, channel: discord.TextChannel, reason: str = None):
         #ctx = await self.bot.get_context(interaction)

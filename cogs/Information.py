@@ -16,7 +16,7 @@ class Information(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.user_info = app_commands.ContextMenu(
-            name='Переглянути іфнформацію',
+            name='Інформація',
             callback=self.user_info_callback
         )
         self.bot.tree.add_command(self.user_info)    
@@ -235,7 +235,7 @@ class Information(commands.Cog):
             StBcommands = row[0]
         embed = discord.Embed(
             title=settings['name'],
-            description=f'Привіт, я Ґанью секретарка Цісін в Ліюе. Моє завдання допомагати мандрівникам освоюватися з дивовижним світом Тейват\n\nМій префікс `{settings["prefix"]}`. Якщо ти хочеш дізнатися всі мої команди тоді можеш скористатися **{settings["prefix"]}help**. Або скористайся **{settings["prefix"]}starjour**, щоб розпочати свою подорож<a:ganyuroll:1037043774850867241>\n{interaction.expires_at}',
+            description=f'Привіт, я Ґанью секретарка Цісін в Ліюе. Моє завдання допомагати мандрівникам освоюватися з дивовижним світом Тейват\n\nМій префікс `{settings["prefix"]}`. Якщо ти хочеш дізнатися всі мої команди тоді можеш скористатися **{settings["prefix"]}help**. Або скористайся **{settings["prefix"]}starjour**, щоб розпочати свою подорож<a:ganyuroll:1037043774850867241>',
             color=settings['color']
         )
         
@@ -413,14 +413,12 @@ class Information(commands.Cog):
         data.commit()
 
     @app_commands.command(name='user', description=f'Детальна інформація про користувача')
-    async def user_(self, interaction: discord.Interaction, user: discord.Member = None):
+    async def user_(self, interaction: discord.Interaction, *, user: discord.Member = None,):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
         
-        ctx = await self.bot.get_context(interaction)
-        
         if user is None:
-            user = ctx.author
+            user = interaction.user
             
         for bio in cur.execute(f'SELECT bio FROM users WHERE id = {user.id}'):
             if bio[0] == 'None':
@@ -434,11 +432,13 @@ class Information(commands.Cog):
                 decimal = int(hex[i:i+2], 16)
                 rgb.append(decimal)
             return rgb
+        bio = bio[0]
+        cut = (bio[:150] + '...') if len(bio) > 150 else bio
         
         if req['banner_color'] is None:
-            embed = discord.Embed(description=bio, color=settings['color'])
+            embed = discord.Embed(description=cut, color=settings['color'])
         else:
-            embed = discord.Embed(description=bio, color=discord.Color.from_rgb(rgb(req['banner_color'].replace('#', ''))[0], rgb(req['banner_color'].replace('#', ''))[1], rgb(req['banner_color'].replace('#', ''))[2]))
+            embed = discord.Embed(description=cut, color=discord.Color.from_rgb(rgb(req['banner_color'].replace('#', ''))[0], rgb(req['banner_color'].replace('#', ''))[1], rgb(req['banner_color'].replace('#', ''))[2]))
         
         #global user_status
         user_status = interaction.guild.get_member(user.id).status
@@ -451,8 +451,6 @@ class Information(commands.Cog):
         elif user_status == discord.Status.dnd or user_status == discord.Status.do_not_disturb:
             user_status = "<:dnd:1048546187487227914>Не турбувати"
 
-        
-        print(interaction.guild.get_member(user.id).activities)
         global ca, spotify, game
         ca = ''
         spotify = ''
@@ -493,16 +491,23 @@ class Information(commands.Cog):
                     artist = artist.split('; ')
                     artist = ", ".join(artist)
                 else:
-                    artist = f'[{active.artist}](https://open.spotify.com/search/{active.artist})'
+                    artist = artist.replace(' ', '_')
+                    artist = f'[{active.artist}](https://open.spotify.com/search/{artist})'
                         
                 spotify = f'**Слухає:** <:spotify:1049105195906379837> [{active.title}](https://open.spotify.com/track/{active.track_id}) - {artist}\n'
             
             if isinstance(active, discord.Game):
                 game = f'**Грає в:** {active.name}\n'
+        
+        nick = ''
+        if user.nick is None:
+            pass
+        else:
+            nick = f'**Ім\'я на сервері:** {user.nick}\n'
           
         embed.add_field(
             name='Основна інформація',
-            value=f'**Ім\'я користувача:** {user.name}#{user.discriminator}\n**Статус:** {user_status}\n{ca}{spotify}{game}**Приєднаввся:** <t:{int(user.joined_at.timestamp())}:D> (<t:{int(user.joined_at.timestamp())}:R>)\n**Зареєструвався:** <t:{int(user.created_at.timestamp())}:D> (<t:{int(user.created_at.timestamp())}:R>)'
+            value=f'**Ім\'я користувача:** {user.name}#{user.discriminator}\n{nick}**Статус:** {user_status}\n{ca}{spotify}{game}**Приєднаввся:** <t:{int(user.joined_at.timestamp())}:D> (<t:{int(user.joined_at.timestamp())}:R>)\n**Зареєструвався:** <t:{int(user.created_at.timestamp())}:D> (<t:{int(user.created_at.timestamp())}:R>)'
         )
         
         embed.set_author(
@@ -529,11 +534,119 @@ class Information(commands.Cog):
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()  
 
+    @app_commands.command(name='bio', description='Встановити інформацію про себе')
+    async def bio_(self, interaction: discord.Interaction, user: discord.Member = None, bio: str = None):
+        for row in cur.execute(f'SELECT commands FROM stats_bot'):
+            StBcommands = row[0]
+        
+        if user is None:
+            user = interaction.user
+            for row in cur.execute(f'SELECT bio FROM users WHERE id = {user.id}'):
+                db_bio = row[0]
+            if bio is None:# returns bio author
+                if db_bio == 'None':# check bio in BD
+                    embed = discord.Embed(
+                        title='Помилка!',
+                        description=f'Ви ще нічого не вписали про себе!\nДетальніше про команду: `{settings["prefix"]}help bio`',
+                        color=0xff0000
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                else:
+                    if user.nick is None:
+                        name = user.name
+                    else:
+                        name = user.nick
+                    embed = discord.Embed(
+                        title=f'Біографія {name}',
+                        description=db_bio,
+                        color=settings['color']
+                    )
+                    
+                    embed.set_thumbnail(
+                        url=user.avatar
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+            elif bio == '-':
+                cur.execute(f'UPDATE users SET bio = "None" WHERE id = {user.id}')
+                    
+                embed = discord.Embed(
+                    title='Біографія оновленна',
+                    description='Ви прибрали свою біографію',
+                    color=settings['color']
+                )
+                embed.set_thumbnail(
+                    url=user.avatar
+                )
+                    
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            else:
+                cur.execute(f'UPDATE users SET bio = "{bio}" WHERE id = {user.id}')
+                data.commit
+                embed = discord.Embed(
+                    title='Біографія оновленна',
+                    description=f'Ви оновили свою біографію на:\n*{bio}*',
+                    color=settings['color']
+                )
+                embed.set_thumbnail(
+                    url=user.avatar
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif user.id != interaction.user.id:
+            if interaction.user.id != 734082410504781854:
+                embed = discord.Embed(
+                    title='Помилка',
+                    description='У тебе немає прав для редагування біографій користувачів',
+                    color=0xff0000
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                print(interaction.user.id)
+            else:
+                if bio is None:
+                    embed = discord.Embed(
+                        title='Помилка',
+                        description=f'Ти забув ввести біографію користувача\nДетальніше про команду: `{settings["prefix"]}help bio`',
+                        color=0xff0000
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                elif bio == '-':
+                    cur.execute(f'UPDATE users SET bio = "None" WHERE id = {user.id}')
+                    data.commit
+                    embed = discord.Embed(
+                        title='Біографія оновленна',
+                        description=f'Ви прибрали біографію користувача **{user.name}**',
+                        color=settings['color']
+                    )
+                    
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                else:
+                    cur.execute(f'UPDATE users SET bio = "{bio}" WHERE id = {user.id}')
+                    embed = discord.Embed(
+                        title='Біографія оновленна',
+                        description=f'Ви оновили біографію користувача {user.name} на:\n*{bio}*',
+                        color=settings['color']
+                    )
+                    
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif user.id == interaction.user.id and bio is None:
+            embed = discord.Embed(
+                    title='Помилка',
+                    description=f'Для чого стільки букв, якщо можна використати просто `{settings["prefix"]}bio`',
+                    color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
+        data.commit()
+    
     async def user_info_callback(self, interaction: discord.Interaction, user: discord.User):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
         
         ctx = await self.bot.get_context(interaction)
+        
+        if user is None:
+            user = ctx.author
+            
         for bio in cur.execute(f'SELECT bio FROM users WHERE id = {user.id}'):
             if bio[0] == 'None':
                 bio = f"Ви можете додати сюди якусь інформацію про себе. Скориставшись `{settings['prefix']}bio`"
@@ -548,9 +661,101 @@ class Information(commands.Cog):
             return rgb
         
         if req['banner_color'] is None:
-            embed = discord.Embed(title=f'Інформація про {user.name}', description=bio, color=settings['color'])
+            embed = discord.Embed(description=bio[0], color=settings['color'])
         else:
-            embed = discord.Embed(title=f'Інформація про {user.name}', description=bio, color=discord.Color.from_rgb(rgb(req['banner_color'].replace('#', ''))[0], rgb(req['banner_color'].replace('#', ''))[1], rgb(req['banner_color'].replace('#', ''))[2]))
+            embed = discord.Embed(description=bio[0], color=discord.Color.from_rgb(rgb(req['banner_color'].replace('#', ''))[0], rgb(req['banner_color'].replace('#', ''))[1], rgb(req['banner_color'].replace('#', ''))[2]))
+        
+        #global user_status
+        user_status = interaction.guild.get_member(user.id).status
+        if user_status == discord.Status.online:
+            user_status = "<:online:1038376483758030898>В мережі"
+        elif user_status == discord.Status.offline or user_status == discord.Status.invisible:
+            user_status = "<:ofline:1038376481774120970>Не в мережі"
+        elif user_status == discord.Status.idle:
+            user_status = "<:idle:1038376474958381056>Відійшов"
+        elif user_status == discord.Status.dnd or user_status == discord.Status.do_not_disturb:
+            user_status = "<:dnd:1048546187487227914>Не турбувати"
+
+        
+        
+        global ca, spotify, game
+        ca = ''
+        spotify = ''
+        game = ''
+        for active in interaction.guild.get_member(user.id).activities:
+            if isinstance(active, discord.CustomActivity):
+                global ca_emoji_type, ca_emoji_id
+                ca_emoji_type = ''
+                ca_emoji_id = ''
+                if active.emoji is None: # Checks whether the user status is emoji
+                    pass
+                else:
+                    if active.emoji.animated is True: # Checks whether emoji is animated
+                        ca_emoji_type = 'a'
+                    ca_emoji_name = active.emoji.name
+                    ca_emoji_id = active.emoji.id
+                ca_name = active.name
+                global ca_emoji
+                ca_emoji = None
+                if self.bot.get_emoji(ca_emoji_id) == None:# Can a bot to reflect that emoji
+                    ca_emoji = ''
+                else:
+                    ca_emoji =  f'<{ca_emoji_type}:{ca_emoji_name}:{ca_emoji_id}>'
+
+                if ca_name is None:
+                    if self.bot.get_emoji(ca_emoji_id) == None:
+                        ca = ''
+                    else:
+                        ca = f'**Користувацький статус**: {ca_emoji}\n'
+                else:
+                    ca = f'**Користувацький статус:** {ca_emoji}{ca_name}\n'
+
+            if isinstance(active, discord.Spotify):
+                print(active.title)
+                print(active.artist)
+                artist = active.artist
+                if len(artist.split('; ')) > 1:
+                    artist = artist.split('; ')
+                    artist = ", ".join(artist)
+                else:
+                    artist = artist.replace(' ', '_')
+                    artist = f'[{active.artist}](https://open.spotify.com/search/{artist})'
+                        
+                spotify = f'**Listen:** <:spotify:1049105195906379837> [{active.title}](https://open.spotify.com/track/{active.track_id}) - {artist}\n'
+            
+            if isinstance(active, discord.Game):
+                game = f'**Грає в:** {active.name}\n'
+        
+        nick = ''
+        if user.nick is None:
+            pass
+        else:
+            nick = f'**Ім\'я на сервері:** {user.nick}\n'
+          
+        embed.add_field(
+            name='Основна інформація',
+            value=f'**Ім\'я користувача:** {user.name}#{user.discriminator}\n{nick}**Статус:** {user_status}\n{ca}{spotify}{game}**Приєднаввся:** <t:{int(user.joined_at.timestamp())}:D> (<t:{int(user.joined_at.timestamp())}:R>)\n**Зареєструвався:** <t:{int(user.created_at.timestamp())}:D> (<t:{int(user.created_at.timestamp())}:R>)'
+        )
+        
+        embed.set_author(
+            name=f'Інформація про {user.name}',
+            icon_url=user.avatar
+        )
+        
+        embed.set_thumbnail(
+            url=user.avatar
+        )
+        
+        if req['banner'] is None:
+            pass
+        else:
+            embed.set_image(
+            url=f'https://cdn.discordapp.com/banners/{user.id}/{req["banner"]}?size=2048'
+        )
+        
+        embed.set_footer(
+            text=f'ID: {user.id}'
+        )
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
