@@ -51,7 +51,7 @@ class Information(commands.Cog):
                 if menu.values[0] == '1':
                     embed = discord.Embed(
                         title='Доступні команди категорії 📃Інформація',
-                        description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<назва команди>`',
+                        description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<command:назва команди чи категорії>`',
                         color=settings['color']
                     )
                     embed.set_thumbnail(
@@ -86,12 +86,17 @@ class Information(commands.Cog):
                         value='Інформація про учасника',
                         inline=False
                     )
+                    embed.add_field(
+                        name=f'{settings["prefix"]}bio',
+                        value='Встановити біографію',
+                        inline=False
+                    )
                     await interaction.response.send_message(embed=embed, ephemeral=True)
                     
                 if menu.values[0] == '2':
                     embed = discord.Embed(
                         title='Доступні команди категорії 💰Економіка',
-                        description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<назва команди>`',
+                        description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<command:назва команди чи категорї>`',
                         color=settings['color']
                     )
                     embed.set_thumbnail(
@@ -115,7 +120,7 @@ class Information(commands.Cog):
             
             embed=discord.Embed(
                 title='Доступні команди:',
-                description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<назва команди>`',
+                description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<command:назва команди чи категорії>`',
                 color=settings['color']
                 )
             embed.set_thumbnail(url=settings['avatar'])
@@ -124,12 +129,12 @@ class Information(commands.Cog):
                 icon_url=settings['avatar']
                 )
             embed.add_field(
-                name=f'📃Information ({settings["prefix"]}help information)',
-                value=f'`{settings["prefix"]}help` `{settings["prefix"]}info` `{settings["prefix"]}stats` `{settings["prefix"]}server` `{settings["prefix"]}user`',
+                name=f'📃Information (`{settings["prefix"]}help <command:Information>)`',
+                value=f'`{settings["prefix"]}help` `{settings["prefix"]}info` `{settings["prefix"]}stats` `{settings["prefix"]}server` `{settings["prefix"]}user` `{settings["prefix"]}bio`',
                 inline=False
                 )
             embed.add_field(
-                name=f'💰Економіка ({settings["prefix"]}help economy)',
+                name=f'💰Економіка (`{settings["prefix"]}help <command:Economy>)`',
                 value=f'`{settings["prefix"]}card` `{settings["prefix"]}set_xp` `{settings["prefix"]}set_lvl`',
                 inline=False
                 )
@@ -147,7 +152,7 @@ class Information(commands.Cog):
             )
             embed.add_field(
                 name='Використання',
-                value=f'{settings["prefix"]}help `<назва команди чи категорії>`',
+                value=f'{settings["prefix"]}help `<command: назва команди чи категорії>`',
                 inline=False
             )
             embed.add_field(
@@ -157,12 +162,17 @@ class Information(commands.Cog):
             )
             embed.add_field(
                 name='Приклад 2',
-                value=f'{settings["prefix"]}help information\n┗Показує всі доступні команди категорії **📃Інформація**',
+                value=f'{settings["prefix"]}help `<command:information>`\n┗Показує всі доступні команди категорії **📃Інформація**',
                 inline=False
             )
             embed.add_field(
                 name='Приклад 3',
-                value=f'{settings["prefix"]}help help\n┗Показує детальну інформацію про команду **{settings["prefix"]}help** (!Ви зараз переглядаєте її!)'
+                value=f'{settings["prefix"]}help `<command:help>`\n┗Показує детальну інформацію про команду **{settings["prefix"]}help** (!Ви зараз переглядаєте її!)'
+            )
+            embed.add_field(
+                name='⠀',
+                value='Примітка: в трикутних дужках відображається назва параметра, а після двох крапок те, що від приймає',
+                inline=False
             )
             
             embed.set_thumbnail(url=settings['avatar'])
@@ -218,13 +228,197 @@ class Information(commands.Cog):
             )
             
             await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif command == 'server':
+            embed = discord.Embed(
+                title='Інформація про сервер',
+                description='Відображає інформацію про сервер де була введена команда.',
+                color=settings['color']
+            )
+            
+            embed.set_author(
+                name=f'Команда "{settings["prefix"]}server"'
+            )
+            embed.add_field(
+                name='Використання',
+                value=f'{settings["prefix"]}server',
+                inline=False
+            )
+            
+            embed.set_thumbnail(url=settings['avatar'])
+            embed.set_footer(
+                text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
+                icon_url=settings['avatar']
+            )
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif command == 'user':
+            embed = discord.Embed(
+                title='Інформація про користувача',
+                description='Відображає інформацію про користувача',
+                color=settings['color']
+            )
+            
+            embed.set_author(
+                name=f'Команда "{settings["prefix"]}user"'
+            )
+            embed.add_field(
+                name='Використання',
+                value=f'{settings["prefix"]}user `<user:користувача у форматі @username>`',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 1',
+                value=f'{settings["prefix"]}user\n┗Відображає інформацію, того хто надіслав команду',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 2',
+                value=f'{settings["prefix"]}user `<user:@Ganyu>`\n┗Відображає інформацію про користувача, якого вказант в параметрі',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 3',
+                value=f'Використання застосунка через контекстне меню натиснувши на правою клавішою миші по користувача(на телеофні просто зажміть ім\'я користувача)',
+                inline=False
+            )
+            embed.add_field(
+                name='⠀',
+                value='Примітка: в трикутних дужках відображається назва параметра, а після двох крапок те, що від приймає',
+                inline=False
+            )
+            
+            embed.set_thumbnail(url=settings['avatar'])
+            embed.set_footer(
+                text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
+                icon_url=settings['avatar']
+            )
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif command == 'bio':
+            embed = discord.Embed(
+                title='Встановити біографію',
+                description='Дозволяє встановити біографію, або відобразити біографію',
+                color=settings['color']
+            )
+            
+            embed.set_author(
+                name=f'Команда "{settings["prefix"]}bio"'
+            )
+            embed.add_field(
+                name='Використання',
+                value=f'{settings["prefix"]}bio `<user:користувач у форматі @username>` `<bio:текст біографії>`',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 1',
+                value=f'{settings["prefix"]}bio\n┗Відображає біографію, того хто відправив команду',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 2',
+                value=f'{settings["prefix"]}bio `<bio:Моя біографія>`\n┗Встановити біграфію',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 3',
+                value=f'{settings["prefix"]}bio `<bio:->`\n┗Очистити біграфію',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 4',
+                value=f'{settings["prefix"]}bio `<user:користувач у форматі @username>` `<bio:Біографія користувача>`\n┗Встановлює біографію вибраному користувачу',
+                inline=False
+            )
+            embed.add_field(
+                name='Приклад 5',
+                value=f'{settings["prefix"]}bio `<user:користувач у форматі @username>` `<bio:->`\n┗Очистити біографію вибраному користувачу',
+                inline=False
+            )
+            
+            embed.add_field(
+                name='⠀',
+                value='Примітка: в трикутних дужках відображається назва параметра, а після двох крапок те, що від приймає',
+                inline=False
+            )
+            
+            embed.set_thumbnail(url=settings['avatar'])
+            embed.set_footer(
+                text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
+                icon_url=settings['avatar']
+            )
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif command == 'Information':
+            embed = discord.Embed(
+                title='Доступні команди категорії 📃Інформація',
+                description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<command:назва команди чи категорії>`',
+                color=settings['color']
+            )
+            embed.set_thumbnail(
+                url=settings['avatar']
+            )
+            embed.set_footer(
+                text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
+                icon_url=settings['avatar']
+            )
+            embed.add_field(
+                name=f'{settings["prefix"]}help',
+                value='Перелік всіх команд та категорій',
+                inline=False
+            )
+            embed.add_field(
+                name=f'{settings["prefix"]}info',
+                value=f'Корисна інформація про {settings["name"]}',
+                inline=False
+            )
+            embed.add_field(
+                name=f'{settings["prefix"]}stats',
+                value=f'Статистика використання {settings["name"]}',
+                inline=False
+            )
+            embed.add_field(
+                name=f'{settings["prefix"]}server',
+                value='Інформація про поточний сервер',
+                inline=False
+            )
+            embed.add_field(
+                name=f'{settings["prefix"]}user',
+                value='Інформація про учасника',
+                inline=False
+            )
+            embed.add_field(
+                name=f'{settings["prefix"]}bio',
+                value='Встановити біографію',
+                inline=False
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        elif command == 'Economy':
+            embed = discord.Embed(
+                title='Доступні команди категорії 💰Економіка',
+                description=f'Ви можете отримати детальну інформацію для кожної команди, викликавши її за допомогою {settings["prefix"]}help `<command:назва команди чи категорї>`',
+                color=settings['color']
+            )
+            embed.set_thumbnail(
+                url=settings['avatar']
+            )
+            embed.set_footer(
+                text='Mops Storage © 2020-2022 Всі права захищено • https://mops-storage.xyz',
+                icon_url=settings['avatar']
+            )
+            embed.add_field(
+                name=f'{settings["prefix"]}card `<користувач>`',
+                value='Виводить інформацію про рівень користувача',
+                inline=False
+            )
+                    
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
             await interaction.response.send_message(embed=discord.Embed(title='Помилка', description=f'Такої команди чи категорії немає!\nПерегляньте команди за допомгою: {settings["prefix"]}help', color=0xff0000), ephemeral=True)
     
     @help.autocomplete("command")
     async def help_autocomplete(self, interaction: discord.Interaction, current: str) -> typing.List[app_commands.Choice[str]]:
         data = []
-        for command_choice in ['help', 'info', 'stats']:
+        for command_choice in ['help', 'info', 'stats', 'server', 'user', 'bio']:
             if current.lower() in command_choice.lower():
                 data.append(app_commands.Choice(name=command_choice, value=command_choice))
         return data    
@@ -269,7 +463,7 @@ class Information(commands.Cog):
             name='⠀',
             value=f'[Patreon]({settings["patreon"]})\n[Diaka]({settings["diaka"]})'
         )
-        
+        await interaction.response.defer(thinking=True)
         await interaction.response.send_message(embed=embed, ephemeral=True)
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()

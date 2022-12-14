@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from discord.ext import commands
 import discord
+from discord import app_commands
 from config import settings
 from asyncio import sleep
 import sqlite3
@@ -120,18 +121,13 @@ class Economy(commands.Cog, name='Економічні команди'):
             #await self.bot.process_commands(message)
             data.commit()
             
-    @commands.command(name='card')
-    async def card(self, ctx, user: discord.Member = None):
-        """
-        Повертає картку, на якій зазанчена інформація про рівень користувача, або автора команди.\n
-        ---\n
-        >> .card `<none or user mention>`
-        """
+    @app_commands.command(name='card', description='Відобразити рівневу картку користувача')
+    async def card_(self, interaction: discord.Interaction, user: discord.Member = None):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
 
         if user is None:
-            user = ctx.author
+            user = interaction.user
             for row in cur.execute(f'SELECT name, cash, money, xp, lvl FROM users WHERE id = {user.id}'):
                 name = row[0]
                 cash = row[1]
@@ -156,17 +152,18 @@ class Economy(commands.Cog, name='Економічні команди'):
                 poppins = easy_pil.Font.montserrat(size = 30)
                 background.paste(rec, (20, 20))
                 background.paste(profile, (50, 50))
-                if str(user.status) == "online":
-                    global color
-                    color = "#43b581"
-                elif str(user.status) == "offline" or user.status == "invisible":\
-                    color = "#747f8d"
-                elif str(user.status) == "idle":
-                    color = "#faa51b"
-                elif str(user.status) == "dnd" or user.status == "do_not_disturb":
-                    color = "#f04848"
+                
+                user_status = interaction.guild.get_member(user.id).status
+                if user_status == discord.Status.online:
+                    user_status = "#43b581"
+                elif user_status == discord.Status.offline or user_status == discord.Status.invisible:
+                    user_status = "#747f8d"
+                elif user_status == discord.Status.idle:
+                    user_status = "#faa51b"
+                elif user_status == discord.Status.dnd or user_status == discord.Status.do_not_disturb:
+                    user_status = "#f04848"
                     
-                background.ellipse((42, 42), width=206, height=206, outline=f"{color}", stroke_width=10)
+                background.ellipse((42, 42), width=206, height=206, outline=f"{user_status}", stroke_width=10)
                 background.rectangle((260, 180), width=630, height=40, fill="#484b4e", radius=20)
                 step = int((xp / int(5 * (lvl ** 2) + (50 * lvl) + 100))*100)
                 if xp < 10 and xp > 0:
@@ -208,8 +205,8 @@ class Economy(commands.Cog, name='Економічні команди'):
                 file = BytesIO()
                 background.save(file, "PNG")
                 file.seek(0)
-                
-                await ctx.reply(file = discord.File(file, filename="image.png"))
+                await interaction.response.defer(thinking=True)
+                await interaction.followup.send(file = discord.File(file, filename="image.png"), ephemeral=True)
                 file.close()
         else:
             for row in cur.execute(f'SELECT name, cash, money, xp, lvl FROM users WHERE id = {user.id}'):
@@ -293,90 +290,101 @@ class Economy(commands.Cog, name='Економічні команди'):
                 file = BytesIO()
                 background.save(file, "PNG")
                 file.seek(0)
-                
-                await ctx.reply(file = discord.File(file, filename="image.png"))
+                await interaction.response.defer(thinking=True)
+                await interaction.followup.send(file = discord.File(file, filename="image.png"), ephemeral=True)
                 file.close()
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
         
-    @commands.command(name='set_xp')
-    async def set_xp(self, ctx, count:int, user: discord.Member = None):
-        """Встановлює досвід користувачу
-
-        Args:
-            `count` (int): Кількість досвіду
-            `user` (discord.Member, optional): Користувач, якому змінюється досвід. Якщщо це параметр пустий(`None`), тоді досвід присвоюється автору. 
-        Example:
-        >> .set_exp `<count>` `<user:optional>`\n
-        >> .set_exp `40`\n
-        >> .set_exp `40` `@Indi Mops`
-        """
+    @app_commands.command(name='set_xp', description='Встановлює досвід користувачу')
+    async def set_xp_(self, interaction: discord.Interaction, count:int, user: discord.Member = None):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
         
         if user is None:
-            user=ctx.author
+            user=interaction.user
             cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
-            emb = discord.Embed(title = 'Досвід успішно змінено', description=f'Досвід користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.reply(embed = emb)
+            emb = discord.Embed(
+                title = 'Досвід успішно змінено',
+                description=f'Досвід користувача **<@{user.id}>** упішно змінено на **{count}**',
+                color = settings['color']
+            )
+            await interaction.response.send_message(embed = emb, ephemeral=True)
             data.commit()
         else:
             cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
-            emb = discord.Embed(title = 'Досвід успішно змінено', description=f'Досвід користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.reply(embed = emb)
+            emb = discord.Embed(
+                title = 'Досвід успішно змінено',
+                description=f'Досвід користувача **<@{user.id}>** упішно змінено на **{count}**',
+                color = settings['color']
+            )
+            await interaction.response.send_message(embed = emb, ephemeral=True)
             data.commit()
             
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
     
-    @commands.command(name='set_lvl')
-    async def set_lvl(self, ctx, count:int, user: discord.Member = None):
-        """Встановлює рівень користувачу
-
-        Args:
-            `count` (int): Кількість досвіду
-            `user` (discord.Member, optional): Користувач, якому змінюється досвід. Якщщо це параметр пустий(`None`), тоді досвід присвоюється автору. 
-        Example:
-        >> .set_lvl `<count>` `<user:optional>`\n
-        >> .set_lvl `40`\n
-        >> .set_lvl `40` `@Indi Mops`
-        """
+    @app_commands.command(name='set_lvl', description='Встановлює рівень користувачу')
+    async def set_lvl_(self, interaction: discord.Interaction, count:int, user: discord.Member = None):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
-        if user is None:
-            user=ctx.author
-            cur.execute(f'UPDATE users SET lvl = {count} WHERE id = {user.id}')
-            emb = discord.Embed(title = 'Рівень успішно змінено', description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.reply(embed = emb)
-            data.commit()
+        if interaction.user.id == settings['dev']['id']:
+            embed = discord.Embed(
+                title='Помилка',
+                description='Вибач, але змінювати рівень іншим користувачам зараз не можливо',
+                color=settings['error_color']
+            )
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
-            cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
-            emb = discord.Embed(title = 'Рівень успішно змінено', description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**', color = 0x46eb34)
-            await ctx.reply(embed = emb)
-            data.commit()
+            if user is None:
+                user=interaction.user
+                cur.execute(f'UPDATE users SET lvl = {count} WHERE id = {user.id}')
+                emb = discord.Embed(
+                    title = 'Рівень успішно змінено',
+                    description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**',
+                    color = settings['color']
+                )
+                await interaction.response.send_message(embed = emb, ephemeral=True)
+                data.commit()
+            else:
+                cur.execute(f'UPDATE users SET xp = {count} WHERE id = {user.id}')
+                emb = discord.Embed(
+                    title = 'Рівень успішно змінено',
+                    description=f'Рівень користувача **<@{user.id}>** упішно змінено на **{count}**',
+                    color = settings['color']
+                )
+                await interaction.response.send_message(embed = emb, ephemeral=True)
+                data.commit()
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
     
-    
-    @commands.command(alias='ld')
-    async def leaderboard(self, ctx):
+    @app_commands.command(name='leaderboard', description='Відображає список лідерів на сервері')
+    async def leaderboard_(self, interaction: discord.Interaction):
         for row in cur.execute(f'SELECT commands FROM stats_bot'):
             StBcommands = row[0]
             
         count = 0
         count_member = 0
-        for i in cur.execute(f'SELECT id FROM users WHERE server_id = {ctx.author.guild.id}'):
+        for i in cur.execute(f'SELECT id FROM users WHERE server_id = {interaction.user.guild.id}'):
             count_member+=1
-        embed = discord.Embed(title=f'Свього окристувачів: {count_member}', color=0x46eb34)
-        for row in cur.execute(f'SELECT name, lvl, xp FROM users WHERE server_id = {ctx.author.guild.id} ORDER BY lvl DESC, xp DESC, name ASC LIMIT 10'):
+        embed = discord.Embed(
+            title=f'Свього окристувачів: {count_member}',
+            color=settings['color']
+        )
+        
+        for row in cur.execute(f'SELECT name, lvl, xp FROM users WHERE server_id = {interaction.user.guild.id} ORDER BY lvl DESC, xp DESC, name ASC LIMIT 10'):
             count+=1
             embed.add_field(
                 name=f'# {count} - {row[0]}',
                 value=f'**Рівень:** {row[1]} | **Досвід:** {row[2]}',
                 inline=False
             )
-            embed.set_thumbnail(url=ctx.author.guild.icon)
-        await ctx.reply(embed=embed)
+            embed.set_thumbnail(
+                url=interaction.user.guild.icon
+            )
+            
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         cur.execute(f'UPDATE stats_bot SET commands = {StBcommands + 1} ')
         data.commit()
 
